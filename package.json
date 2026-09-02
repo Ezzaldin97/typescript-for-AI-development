@@ -1,0 +1,27 @@
+{
+  "name": "typescript-for-ai-development",
+  "version": "1.0.0",
+  "description": "Seven focused days that take you from a bare TypeScript project to a deployed, multi-tool AI agent, reusing everything you already know about types, validation, and testing from Python, and mapping it explicitly onto the TypeScript/Node ecosystem as you go.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc",
+    "watch": "npx tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ezzaldin97/typescript-for-AI-development.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ezzaldin97/typescript-for-AI-development/issues"
+  },
+  "homepage": "https://github.com/Ezzaldin97/typescript-for-AI-development#readme",
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2"
+  }
+}
