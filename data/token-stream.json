@@ -1,0 +1,32 @@
+[
+  {
+    "id": "stream-1",
+    "prompt": "What's the weather like in Cairo today?",
+    "delayMs": 40,
+    "tokens": ["It's", "currently", "34\u00b0C", "and", "sunny", "in", "Cairo,", "with", "light", "winds."]
+  },
+  {
+    "id": "stream-2",
+    "prompt": "Summarize 'Attention Is All You Need' in one sentence.",
+    "delayMs": 60,
+    "tokens": ["The", "paper", "introduces", "the", "Transformer,", "a", "model", "architecture", "based", "entirely", "on", "attention."]
+  },
+  {
+    "id": "stream-3",
+    "prompt": "What's AAPL trading at right now?",
+    "delayMs": 35,
+    "tokens": ["AAPL", "is", "currently", "trading", "at", "$228.41,", "up", "1.2%."]
+  },
+  {
+    "id": "stream-4",
+    "prompt": "Explain MCP in one sentence.",
+    "delayMs": 50,
+    "tokens": ["MCP", "lets", "an", "agent", "discover", "and", "call", "tools", "hosted", "on", "a", "remote", "server."]
+  },
+  {
+    "id": "stream-5",
+    "prompt": "Confirm the task is done.",
+    "delayMs": 45,
+    "tokens": ["Task", "complete.", "All", "three", "action", "items", "have", "been", "logged."]
+  }
+]
