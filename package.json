@@ -37,7 +37,12 @@
     "typescript-eslint": "^8.69.0"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^2.0.43",
+    "@ai-sdk/openai-compatible": "^3.0.43",
+    "@ai-sdk/tui": "^1.0.92",
     "@modernized/arxiv-api": "^1.0.1",
+    "@tavily/core": "^0.7.9",
+    "ai": "^7.0.91",
     "dotenv": "^17.4.2",
     "openai": "^7.9.0",
     "zod": "^4.5.4"
