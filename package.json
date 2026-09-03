@@ -40,6 +40,7 @@
     "@ai-sdk/mcp": "^2.0.43",
     "@ai-sdk/openai-compatible": "^3.0.43",
     "@ai-sdk/tui": "^1.0.92",
+    "@modelcontextprotocol/server-filesystem": "^2026.8.31",
     "@modernized/arxiv-api": "^1.0.1",
     "@tavily/core": "^0.7.9",
     "ai": "^7.0.91",
