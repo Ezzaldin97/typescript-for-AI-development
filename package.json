@@ -37,6 +37,9 @@
     "typescript-eslint": "^8.69.0"
   },
   "dependencies": {
+    "@modernized/arxiv-api": "^1.0.1",
+    "dotenv": "^17.4.2",
+    "openai": "^7.9.0",
     "zod": "^4.5.4"
   }
 }
