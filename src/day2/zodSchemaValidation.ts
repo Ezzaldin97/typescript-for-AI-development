@@ -73,7 +73,9 @@ const optionalSchema = z.object({
 });
 
 console.log(optionalSchema.parse({ bio: null })); // => { bio: null, country: 'Unknown', score: 0 }
-console.log(optionalSchema.parse({ nickname: 'Ezz', bio: 'AI', country: 'EG', score: 5 }));
+console.log(
+  optionalSchema.parse({ nickname: 'Ezz', bio: 'AI', country: 'EG', score: 5 }),
+);
 
 // Arrays, Records & Object helpers
 // Python parallel: list[str], dict[str, int], TypedDict(total=False)
@@ -95,12 +97,23 @@ const ExtendedUser = BaseUser.extend({ role: roleSchema }); // add fields
 const PublicUser = BaseUser.pick({ id: true, name: true }); // subset (like Pick<T, K>)
 const PartialUser = BaseUser.partial(); // all optional (like Partial<T> / TypedDict(total=False))
 
-console.log(ExtendedUser.parse({ id: '1', name: 'Ezz', email: 'hi@example.com', role: 'admin' }));
+console.log(
+  ExtendedUser.parse({
+    id: '1',
+    name: 'Ezz',
+    email: 'hi@example.com',
+    role: 'admin',
+  }),
+);
 console.log(PublicUser.parse({ id: '1', name: 'Ezz' }));
 console.log(PartialUser.parse({})); // => {} — everything optional
 
 type BaseUserType = z.infer<typeof BaseUser>;
-const readonlyUser: Readonly<BaseUserType> = { id: '1', name: 'Ezz', email: 'hi@example.com' };
+const readonlyUser: Readonly<BaseUserType> = {
+  id: '1',
+  name: 'Ezz',
+  email: 'hi@example.com',
+};
 console.log(readonlyUser.name);
 
 // Mini discriminated union (see schema.ts for the full agent-steps version)
