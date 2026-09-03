@@ -38,7 +38,7 @@ Install [Zod](https://v3.zod.dev/) to handle schema validation
 npm install zod
 ```
 
-## Day 2 TS Programming/Concepts
+### Day 2 TS Programming/Concepts
 
 - Cover Generics and Classes(Optional), check `index.ts`, to cover these topics, I recommend to check:
 
