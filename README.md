@@ -6,15 +6,15 @@ Seven focused days that take you from a bare TypeScript project to a deployed, m
 everything you already know about types, validation, and testing from Python, and mapping it explicitly onto the
 TypeScript/Node ecosystem as you go.
 
-| Day   | Focus                                               | Key Deliverable                                                                                                                   |
-| ----- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Day 1 | TypeScript & Node.js Foundations                    | A strict-mode TS project that runs via `pnpm tsx src/index.ts`, containing a fully-typed paper-sorter script with no `any`.       |
-| Day 2 | Advanced Types & Runtime Validation                 | schemas.ts with three Zod schemas plus inferred types, and a discriminated-union step handler with exhaustiveness checking.       |
-| Day 3 | Async Patterns, Tooling                             | fetchWithRetry.ts, streamDemo.ts, and a clean lint run.                                                                           |
-| Day 4 | LLM SDKs, Tool Use & Structured Output              | chat.ts (streaming chatbot) and toolLoop.ts (a working, hand-rolled single-tool agent loop).                                      |
-| Day 5 | Building Your First Real Agent                      | agentV1.ts, a working multi-tool agent with conversation memory, using a framework plus at least one MCP-provided tool.           |
-| Day 6 | Multi-Agent Orchestration, Persistence & Guardrails | multiAgent.ts and db.ts, a persisted, guarded, two-agent system with structured logs.                                             |
-| Day 7 | Capstone: Build & Ship a Complete Agent App         | A deployed, working agent application with a live URL, a README covering architecture and limitations, and a short written retro. |
+| Day                                                                                     | Focus                                               | Key Deliverable                                                                                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [Day 1](./src/day1/README.md)                                                           | TypeScript & Node.js Foundations                    | A strict-mode TS project that runs via `pnpm tsx src/index.ts`, containing a fully-typed paper-sorter script with no `any`.       |
+| [Day 2](./src/day2/README.md)                                                           | Advanced Types & Runtime Validation                 | schemas.ts with three Zod schemas plus inferred types, and a discriminated-union step handler with exhaustiveness checking.       |
+| [Day 3](./src/day3/README.md)                                                           | Async Patterns, Tooling                             | fetchWithRetry.ts, streamDemo.ts, and a clean lint run.                                                                           |
+| [Day 4](./src/day4/README.md)                                                           | LLM SDKs, Tool Use & Structured Output              | chat.ts (streaming chatbot) and toolLoop.ts (a working, hand-rolled single-tool agent loop).                                      |
+| [Day 5](./src/day5/README.md)                                                           | Building Your First Real Agent                      | agentV1.ts, a working multi-tool agent with conversation memory, using a framework plus at least one MCP-provided tool.           |
+| [Day 6](./src/day6/README.md)                                                           | Multi-Agent Orchestration, Persistence & Guardrails | multiAgent.ts and db.ts, a persisted, guarded, two-agent system with structured logs.                                             |
+| Day 7                                                                                   | Capstone: Build & Ship a Complete Agent App         | A deployed, working agent application with a live URL, a README covering architecture and limitations, and a short written retro. |
 
 ## Prerequisites & Setup
 
