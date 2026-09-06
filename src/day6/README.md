@@ -23,84 +23,38 @@ Split work across agents, persist state across restarts, and add the safety rail
 
 ## Day 6 Hands-on Lab
 
-#### Lab: Orchestrator + Executor Sub-Agent (`tools.ts` + `multiAgent.ts`)
+#### Lab: Orchestrator + Persistent Memory (`tools.ts` + `multiAgent.ts` + `memory.ts` + `tui.ts`)
 
-Hand-roll the CrewAI/AutoGen-style orchestrator/worker pattern with the Vercel AI SDK: the main agent delegates research tasks to an executor sub-agent *exposed as a streaming tool*. Reference implementations: `src/day6/tools.ts` (270 lines, same 5-tool set as Day 5) + `src/day6/multiAgent.ts` (146 lines). Persistence & guardrails will be layered on in a follow-up lab.
+Build a two-agent system that remembers: an orchestrator delegates work to an executor sub-agent, and every turn is saved to SQLite so a chat survives restarts. Reference files: `src/day6/tools.ts`, `multiAgent.ts`, `memory.ts`, `tui.ts`. Guardrails and structured logging come in a later lab.
 
 **1. Goal**
 
-Practice multi-agent orchestration: a `ToolLoopAgent` (orchestrator, `omen-alpha`) whose only tool `executor` spawns a second `ToolLoopAgent` (worker, `glm-5.3-flash` + all 5 tools + MCP filesystem tools) and streams its progress back via an `async function*` `execute`.
+Understand three ideas and wire them together: sub-agent-as-tool, `ToolLoopAgent` statelessness (history must live outside the agent), and a load → turn → save loop. No copy-paste: read the reference files, then reconstruct the flow in your own words and code.
 
 **2. Setup**
 
-- Deps: same as Day 5 — `ai`, `@ai-sdk/openai-compatible`, `@ai-sdk/tui`, `@ai-sdk/mcp`, `@modelcontextprotocol/server-filesystem`, `@modernized/arxiv-api`, `@tavily/core`, `dotenv`, `zod`.
-- Env: project-root `.env` with `OPENCODE_API_KEY` + `TAVILY_API_KEY`. `multiAgent.ts` resolves it with double `path.dirname`; `tools.ts` uses single `dirname` (`src/.env`) — it only works when imported via `multiAgent.ts`'s `dotenv.config`.
-- Run (interactive TUI titled `automata`, tools `full`, reasoning `full`): `npx tsx src/day6/multiAgent.ts`. Don't run a second instance while one is open.
+- Deps: Day 5 set plus `npm install better-sqlite3` (and `@types/better-sqlite3` as dev).
+- Env: project-root `.env` with `OPENCODE_API_KEY` + `TAVILY_API_KEY`.
+- Run ephemeral (in-memory only): `npx tsx src/day6/tui.ts`
+- Run persistent: `npx tsx src/day6/tui.ts --persist <chatId>` — quit with `/exit`, re-run with the same id, history must resume.
+- Verify: `npx tsc --noEmit`.
 
-**3. Tasks**
+**3. Tasks (think first, then write)**
 
-1. **Reuse the toolset (`tools.ts`):** copy Day 5's five `tool()` definitions (`calculatorTool`, `searchPapersTool`, `currentDateTimeTool`, `webSearchTool`, `webExtractTool`) with their Zod `inputSchema`/`outputSchema` — unchanged, exported for the executor.
-2. **Build the executor (worker) agent:**
-   ```ts
-   const executorAgent = (mcpTools?: any) => new ToolLoopAgent({
-     model: provider('glm-5.3-flash'),
-     instructions: `You are intelligent executor agent. Complete the task autonomously.
-       IMPORTANT: When you have finished, write a clear summary of your findings as your final response.
-       This summary will be returned to the main agent, so include all relevant information.`,
-     tools: { calculator, searchPapers, currentDateTime, webSearch, webExtract, ...mcpTools },
-     maxRetries: 5, onStepFinish, prepareStep, // step logging + pruneMessages above 100k est. tokens
-   });
-   ```
-3. **Expose the sub-agent as a streaming tool (the key pattern):**
-   ```ts
-   const executorTool = tool({
-     description: 'Execution tool to search, search research topics, calculate, and interact with filesystem. just give it clear task.',
-     inputSchema: z.object({ task: z.string().nonempty() }),
-     execute: async function* ({ task }, { abortSignal }) {
-       const fsMCP = await getMCPClient();
-       const fsTools = await fsMCP.tools(); // note: reference file misses `await` — add it
-       const execSubagent = executorAgent(fsTools);
-       try {
-         const result = await execSubagent.stream({ prompt: task, abortSignal });
-         for await (const message of readUIMessageStream({
-           stream: toUIMessageStream({ stream: result.stream }),
-         })) {
-           yield message; // each yield = accumulated UIMessage
-         }
-       } finally {
-         await fsMCP.close();
-       }
-     },
-     toModelOutput: ({ output: message }) => ({
-       type: 'text',
-       value: message?.parts.findLast(p => p.type === 'text')?.text ?? 'Task completed.',
-     }),
-   });
-   ```
-   `async function*` makes the tool stream; `toModelOutput` is what the orchestrator model actually sees (only the worker's final summary).
-4. **Build the orchestrator (planner) agent:**
-   ```ts
-   const mainAgent = () => new ToolLoopAgent({
-     model: provider('omen-alpha'),
-     instructions: `You are intelligent assistant that supported with executor.
-       Your Task is to understand the objective of the given question, and delegate tasks
-       to executor then return the answer after finalize the requirements.`,
-     tools: { executor: executorTool },
-   });
-   ```
-5. **Run interactively:** `runTUI()` → `runAgentTUI({ title: 'automata', agent, tools: 'full', reasoning: 'full', responseStatistics: 'outputTokenCount', contextSize: 200_000 })` and delegate a research question end-to-end.
+1. **Tools (`tools.ts`):** reuse the five Day 5 tools unchanged for the executor. Ask yourself: why does the orchestrator never get these tools directly — what breaks if it does?
+2. **Executor as a streaming tool (`multiAgent.ts`, `executorTool`):** a sub-agent wrapped in `tool()` whose `execute` is an `async function*`. Figure out: why stream instead of awaiting one result? What does the parent model actually receive back, and which piece of the tool definition controls that? What must happen to the MCP client even when the sub-agent throws?
+3. **Persistence (`memory.ts`):** a `chats` table holding each chat's messages as JSON text, with create/load/save/list/delete helpers. Figure out: why store messages as a JSON `TEXT` column instead of one row per message? Why does `saveChat` fall back to `INSERT` when `UPDATE` touches zero rows?
+4. **Persistent turn (`multiAgent.ts`, `runPersistentTurn`):** load history → append user message → convert → stream main agent → append assistant message → save. Figure out: the agent is stateless, so what exactly must be passed into `stream()` for it to "remember"? Why convert `UIMessage[]` before sending, and why keep the ephemeral executor away from the main history?
+5. **Entry points (`tui.ts`):** ephemeral TUI vs persistent CLI selected by argv (`--persist`, bare chat id, or default). Figure out: why can't the stock `runAgentTUI` resume a chat on its own — what does the manual loop provide that it doesn't?
 
 **4. Acceptance checklist**
 
-- [ ] Orchestrator has exactly one tool (`executor`); worker has the 5 local tools + MCP filesystem tools.
-- [ ] Sub-agent streams through `readUIMessageStream` + `toUIMessageStream`; orchestrator only receives the final text summary via `toModelOutput`.
-- [ ] MCP client closed in `finally`; `abortSignal` forwarded to the sub-agent.
-- [ ] Missing `await` on `fsMCP.tools()` in `executorTool` fixed (compare Day 5 `agentV1.ts`).
-- [ ] `npx tsc --noEmit` passes; only one TUI instance at a time.
+- [ ] Delegate a research question end-to-end; executor steps stream, final answer returns.
+- [ ] In `--persist` mode: `/exit`, re-run with the same chat id, and the resumed history prints before your next prompt.
+- [ ] A restart mid-conversation loses nothing already saved — confirm by checking the resume preview.
+- [ ] `npx tsc --noEmit` passes.
 
-**5. Stretch goals / Coming next**
+**5. Coming next (don't build yet)**
 
-- Persistence (next lab): save conversation state with `better-sqlite3` (Python `sqlite3` parallel) so a session resumes after restart.
-- Guardrails (next lab): step limits, schema-validated tool I/O, human-in-the-loop confirmation for risky tools.
-- Observability (next lab): swap `console.log` for `pino` structured logs + simple span-style tracing.
-- Generalize: make `executorTool` take a worker-agent id so the orchestrator can pick among multiple specialists.
+- Guardrails: step limits, validated tool I/O, human-in-the-loop confirmation for risky tools.
+- Observability: `pino` structured logs + simple span-style tracing instead of `console.log`.
