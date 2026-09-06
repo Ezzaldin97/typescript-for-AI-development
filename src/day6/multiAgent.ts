@@ -6,7 +6,6 @@ import {
     tool,
     pruneMessages, type ModelMessage 
 } from 'ai';
-import { runAgentTUI } from '@ai-sdk/tui';
 import { createMCPClient } from '@ai-sdk/mcp';
 import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/mcp/mcp-stdio';
 import { z } from 'zod';
@@ -115,7 +114,7 @@ const executorTool = tool({
     },
 });
 
-const mainAgent = () => {
+export const mainAgent = () => {
     const mainAgent = new ToolLoopAgent({
         model: provider('omen-alpha'),
         instructions: `You are intelligent assistant that supported with executor.
@@ -128,19 +127,3 @@ const mainAgent = () => {
     });
     return mainAgent;
 }
-
-const runTUI = async () => {
-    const agent = mainAgent();
-    await runAgentTUI({
-        title: 'automata',
-        agent,
-        tools: 'full',
-        reasoning: 'full',
-        responseStatistics: 'outputTokenCount',
-        contextSize: 200_000,
-    });
-};
-
-runTUI().catch((error) => {
-  console.error('Error:', error);
-});
