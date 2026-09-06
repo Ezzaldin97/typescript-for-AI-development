@@ -3,8 +3,10 @@ import {
     ToolLoopAgent, 
     readUIMessageStream, 
     toUIMessageStream,
+    convertToModelMessages,
+    generateId,
     tool,
-    pruneMessages, type ModelMessage 
+    pruneMessages, type ModelMessage, type UIMessage 
 } from 'ai';
 import { createMCPClient } from '@ai-sdk/mcp';
 import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/mcp/mcp-stdio';
@@ -12,7 +14,8 @@ import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import {calculatorTool, searchPapersTool, currentDateTimeTool, webSearchTool, webExtractTool} from './tools'
+import {calculatorTool, searchPapersTool, currentDateTimeTool, webSearchTool, webExtractTool} from './tools';
+import { createChat, loadChat, saveChat } from './memory';
 
 dotenv.config({ path: path.join(path.dirname(path.dirname(__dirname)), '.env') });
 
@@ -86,7 +89,7 @@ const executorTool = tool({
     }),
     execute: async function* ({ task }, { abortSignal }) {
         const fsMCP = await getMCPClient();
-        const fsTools = fsMCP.tools();
+        const fsTools = await fsMCP.tools();
         const execSubagent = executorAgent(fsTools);
         // Start the subagent with streaming
         try{
@@ -127,3 +130,71 @@ export const mainAgent = () => {
     });
     return mainAgent;
 }
+
+// The ToolLoopAgent is stateless: every stream() call only sees what you pass.
+// So history lives outside the agent in SQLite (UIMessage[] per chatId).
+// The executor sub-agent stays ephemeral per task, its final summary already
+// lands in the main history via executorTool.toModelOutput, so don't share
+// the main chat history with it.
+
+/** Ensure the chat row exists and return its history. */
+export const getChatHistory = (chatId: string): UIMessage[] => {
+    createChat(chatId);
+    return loadChat(chatId);
+};
+
+/** Extract printable text from a UIMessage (for CLI display / return value). */
+export const getMessageText = (message: UIMessage | undefined): string => {
+    if (!message) return '';
+    return message.parts
+        .filter((p): p is Extract<UIMessage['parts'][number], { type: 'text' }> => p.type === 'text')
+        .map((p) => p.text)
+        .join('');
+};
+
+export type PersistentTurnResult = {
+    text: string;
+    messages: UIMessage[];
+};
+
+// Run one persistent turn: load history -> append user msg -> stream main
+// agent with full history -> append assistant msg -> save.
+
+export const runPersistentTurn = async (
+    chatId: string,
+    userText: string,
+    opts: { abortSignal?: AbortSignal; onTextDelta?: (text: string) => void } = {}
+): Promise<PersistentTurnResult> => {
+    const agent = mainAgent();
+    const messages: UIMessage[] = getChatHistory(chatId);
+
+    messages.push({
+        id: generateId(),
+        role: 'user',
+        parts: [{ type: 'text', text: userText }],
+    });
+
+    const modelMessages = await convertToModelMessages(messages, { tools: agent.tools });
+
+    const result = await agent.stream({
+        prompt: modelMessages,
+        abortSignal: opts.abortSignal,
+    });
+
+    // Collect the accumulated assistant UIMessage the same way executorTool does.
+    let assistantMessage: UIMessage | undefined;
+    for await (const msg of readUIMessageStream({
+        stream: toUIMessageStream({ stream: result.stream }),
+    })) {
+        assistantMessage = msg as UIMessage;
+        const delta = getMessageText(assistantMessage);
+        if (delta && opts.onTextDelta) opts.onTextDelta(delta);
+    }
+
+    if (assistantMessage) {
+        messages.push(assistantMessage);
+    }
+    saveChat(chatId, messages);
+
+    return { text: getMessageText(assistantMessage) || 'Task completed.', messages };
+};
