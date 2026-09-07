@@ -5,3 +5,9 @@ dist
 
 # memory databases
 *.db
+
+# logs
+logs
+
+# Stakpak session files
+.stakpak/session*
