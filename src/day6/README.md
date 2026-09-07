@@ -19,6 +19,21 @@ Split work across agents, persist state across restarts, and add the safety rail
 
 ## Day 6 Content
 
+## Install Dependencies:
+
+- install `better-sqlite3` or any  and its typescript type definiation:
+```bash
+npm install better-sqlite3
+npm install @types/better-sqlite3
+```
+
+- install `pino` and its typescript type definition:
+```bash
+npm install pino @types/pino
+```
+
+## Day 6 TS Programming/Concepts
+
 - use your experience to complete the multi-agent orchestration/Persistence/gurdrails lab, check the [Vercel AI SDK](https://ai-sdk.dev/docs/introduction) (feel free to use other), and fight with the documentation to build your first agent.
 
 ## Day 6 Hands-on Lab
