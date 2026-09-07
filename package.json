@@ -44,10 +44,12 @@
     "@modelcontextprotocol/server-filesystem": "^2026.8.31",
     "@modernized/arxiv-api": "^1.0.1",
     "@tavily/core": "^0.7.9",
+    "@types/pino": "^7.0.4",
     "ai": "^7.0.91",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
     "openai": "^7.9.0",
+    "pino": "^10.3.1",
     "zod": "^4.5.4"
   }
 }
