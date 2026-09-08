@@ -8,6 +8,10 @@ import {
     tool,
     pruneMessages, type ModelMessage, type UIMessage 
 } from 'ai';
+import {
+  agentGuardrails,
+  piiDetector
+} from 'ai-sdk-guardrails';
 import { createMCPClient } from '@ai-sdk/mcp';
 import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/mcp/mcp-stdio';
 import { z } from 'zod';
@@ -128,7 +132,10 @@ const executorTool = tool({
 // main agent can take the logger optionally..
 export const mainAgent = (logger?: Logger) => {
     const mainAgent = new ToolLoopAgent({
-        model: provider('omen-alpha'),
+        ...agentGuardrails({
+            model: provider('omen-alpha'),
+            inputGuardrails: [piiDetector()]
+        }),
         instructions: `You are intelligent assistant that supported with executor.
         Your Task is to understand the objective of the given question, and delegate tasks
         to executor then return the answer after finalize the requirements.
