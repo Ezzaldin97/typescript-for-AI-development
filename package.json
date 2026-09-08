@@ -46,6 +46,7 @@
     "@tavily/core": "^0.7.9",
     "@types/pino": "^7.0.4",
     "ai": "^7.0.91",
+    "ai-sdk-guardrails": "^6.1.1",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
     "openai": "^7.9.0",
