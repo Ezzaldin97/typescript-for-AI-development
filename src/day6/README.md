@@ -32,6 +32,11 @@ npm install @types/better-sqlite3
 npm install pino @types/pino
 ```
 
+- install `ai-sdk-guardrails`
+```bash
+npm install ai-sdk-guardrails
+```
+
 ## Day 6 TS Programming/Concepts
 
 - use your experience to complete the multi-agent orchestration/Persistence/gurdrails lab, check the [Vercel AI SDK](https://ai-sdk.dev/docs/introduction) (feel free to use other), and fight with the documentation to build your first agent.
@@ -40,15 +45,15 @@ npm install pino @types/pino
 
 #### Lab: Orchestrator + Persistent Memory (`tools.ts` + `multiAgent.ts` + `memory.ts` + `tui.ts`)
 
-Build a two-agent system that remembers and reports its costs: an orchestrator delegates work to an executor sub-agent, every turn is saved to SQLite so a chat survives restarts, and every orchestrator step is logged as structured JSON with token usage. Reference files: `src/day6/tools.ts`, `multiAgent.ts`, `memory.ts`, `tui.ts`. Guardrails come in a later lab.
+Build a two-agent system that remembers, reports its costs, and screens its inputs: an orchestrator delegates work to an executor sub-agent, every turn is saved to SQLite so a chat survives restarts, every orchestrator step is logged as structured JSON with token usage, and a PII detector guards the orchestrator's inputs. Reference files: `src/day6/tools.ts`, `multiAgent.ts`, `memory.ts`, `tui.ts`. Output guardrails and human-in-the-loop come in a later lab.
 
 **1. Goal**
 
-Understand four ideas and wire them together: sub-agent-as-tool, `ToolLoopAgent` statelessness (history must live outside the agent), a load → turn → save loop, and per-step usage logging as structured JSON. No copy-paste: read the reference files, then reconstruct the flow in your own words and code.
+Understand five ideas and wire them together: sub-agent-as-tool, `ToolLoopAgent` statelessness (history must live outside the agent), a load → turn → save loop, per-step usage logging as structured JSON, and input guardrails. No copy-paste: read the reference files, then reconstruct the flow in your own words and code.
 
 **2. Setup**
 
-- Deps: Day 5 set plus `npm install better-sqlite3` (and `@types/better-sqlite3` as dev) and `npm install pino`.
+- Deps: Day 5 set plus `npm install better-sqlite3` (and `@types/better-sqlite3` as dev), `npm install pino`, and `npm install ai-sdk-guardrails`.
 - Env: project-root `.env` with `OPENCODE_API_KEY` + `TAVILY_API_KEY`. Optional: `LOG_LEVEL=debug` to raise log verbosity (default `info`).
 - Logs land in `logs/<chatId>-<timestamp>.log` (or `logs/NOID-<timestamp>.log` for ephemeral runs) — one JSON line per orchestrator step.
 - Note: the provider sends a stable `x-opencode-session` header per process (required by the opencode gateway) — don't regenerate it per turn.
@@ -64,6 +69,7 @@ Understand four ideas and wire them together: sub-agent-as-tool, `ToolLoopAgent`
 4. **Persistent turn (`multiAgent.ts`, `runPersistentTurn`):** load history → append user message → convert → stream main agent → append assistant message → save. Figure out: the agent is stateless, so what exactly must be passed into `stream()` for it to "remember"? Why convert `UIMessage[]` before sending, and why keep the ephemeral executor away from the main history?
 5. **Entry points (`tui.ts`):** ephemeral TUI vs persistent CLI selected by argv (`--persist`, bare chat id, or default). Figure out: why can't the stock `runAgentTUI` resume a chat on its own — what does the manual loop provide that it doesn't?
 6. **Usage logging (`tui.ts` + `multiAgent.ts` `onStepFinish`):** one JSON line per orchestrator step — event name, step number, input/output/total tokens, finish reason. Figure out: why does each run get its own log file instead of appending to one shared file? Why is the logger passed down as an optional argument instead of a module-level global — what does that buy you for testing? Only the orchestrator's steps are logged, not the executor's — where would you hook in worker-side logging if you needed per-sub-task cost attribution?
+7. **PII input guardrail (`multiAgent.ts`, `mainAgent`):** the orchestrator's config is spread with `agentGuardrails({ model, inputGuardrails: [piiDetector()] })` from `ai-sdk-guardrails`. Figure out: at what point in the turn does the input check run — before or after history is loaded? What should happen when a message contains something like an API key: block the turn, redact, or warn — and what does the library actually do? Why guard only the orchestrator and not the executor worker? What PII in *tool results* (e.g. a file the worker reads) would this input check miss, and which kind of guardrail would catch that?
 
 **4. Acceptance checklist**
 
@@ -71,8 +77,9 @@ Understand four ideas and wire them together: sub-agent-as-tool, `ToolLoopAgent`
 - [ ] In `--persist` mode: `/exit`, re-run with the same chat id, and the resumed history prints before your next prompt.
 - [ ] A restart mid-conversation loses nothing already saved — confirm by checking the resume preview.
 - [ ] After any run, `logs/` holds a `<chatId>-<timestamp>.log` file with one `agent.step.finish` JSON line per step, token counts included.
+- [ ] Paste a fake secret (e.g. `sk-test-1234567890abcdef`) into the chat and observe what the PII guardrail does to the turn.
 - [ ] `npx tsc --noEmit` passes.
 
 **5. Coming next (don't build yet)**
 
-- Guardrails: step limits, validated tool I/O, human-in-the-loop confirmation for risky tools.
+- Output guardrails and human-in-the-loop confirmation for risky tools.
