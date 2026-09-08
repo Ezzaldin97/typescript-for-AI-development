@@ -2,11 +2,38 @@ import { runAgentTUI } from '@ai-sdk/tui';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { generateId } from 'ai';
+import pino, { Logger } from 'pino';
+import fs from 'fs';
+import path from 'path';
 
 import { mainAgent, runPersistentTurn, getChatHistory, getMessageText } from './multiAgent';
 
+const logDir = path.join(path.dirname(path.dirname(__dirname)), 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
 const runEphemeralTUI = async () => {
-    const agent = mainAgent();
+    const fileTransport = pino.transport({
+        target: 'pino/file',
+        options: {
+            destination: path.join(logDir, `NOID-${Date.now()}.log`),
+            mkdir: true,
+        },
+    });
+    const logger: Logger = pino(
+        {
+            level: process.env.LOG_LEVEL || 'info',
+            formatters: {
+                level: (label) => {
+                    return { level: label };
+                },
+            },
+            timestamp: pino.stdTimeFunctions.isoTime,
+        },
+        fileTransport
+    );
+    const agent = mainAgent(logger);
     await runAgentTUI({
         title: 'automata',
         agent,
@@ -21,6 +48,25 @@ const runEphemeralTUI = async () => {
 // runAgentTUI keeps its message list only in memory, so resume requires
 // this loop (load -> turn -> save) instead of runAgentTUI.
 const runPersistentCLI = async (chatId: string) => {
+    const fileTransport = pino.transport({
+        target: 'pino/file',
+        options: {
+            destination: path.join(logDir, `${chatId}-${Date.now()}.log`),
+            mkdir: true,
+        },
+    });
+    const logger: Logger = pino(
+        {
+            level: process.env.LOG_LEVEL || 'info',
+            formatters: {
+                level: (label) => {
+                    return { level: label };
+                },
+            },
+            timestamp: pino.stdTimeFunctions.isoTime,
+        },
+        fileTransport
+    );
     const history = getChatHistory(chatId);
     console.log(`[persist] chat=${chatId} resumed ${history.length} messages`);
     for (const m of history.slice(-6)) {
@@ -39,7 +85,7 @@ const runPersistentCLI = async (chatId: string) => {
             try {
                 process.stdout.write('Assistant: ');
                 let lastLen = 0;
-                const { text: finalText } = await runPersistentTurn(chatId, text, {
+                const { text: finalText } = await runPersistentTurn(chatId, text, logger, {
                     onTextDelta: (full) => {
                         // Incremental render: only write the new tail.
                         if (full.length > lastLen) {

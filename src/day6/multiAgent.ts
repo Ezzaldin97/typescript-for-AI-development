@@ -13,16 +13,23 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import { Logger } from 'pino';
+import { randomUUID } from 'crypto';
 
 import {calculatorTool, searchPapersTool, currentDateTimeTool, webSearchTool, webExtractTool} from './tools';
 import { createChat, loadChat, saveChat } from './memory';
 
 dotenv.config({ path: path.join(path.dirname(path.dirname(__dirname)), '.env') });
 
+const sessionId = randomUUID(); // keep this stable per conversation/thread required by opencode 8/9/2026
+
 const provider = createOpenAICompatible({
   name: 'opencode',
   apiKey: process.env['OPENCODE_API_KEY'] || '',
-  baseURL: "https://opencode.ai/zen/go/v1"
+  baseURL: "https://opencode.ai/zen/go/v1",
+  headers: {
+    'x-opencode-session': sessionId,
+  },
 });
 
 const getMCPClient = async () => {
@@ -117,7 +124,9 @@ const executorTool = tool({
     },
 });
 
-export const mainAgent = () => {
+// because we have 2 options (persistence/no-persistence)
+// main agent can take the logger optionally..
+export const mainAgent = (logger?: Logger) => {
     const mainAgent = new ToolLoopAgent({
         model: provider('omen-alpha'),
         instructions: `You are intelligent assistant that supported with executor.
@@ -127,6 +136,21 @@ export const mainAgent = () => {
         tools: {
             executor: executorTool,
         },
+        onStepFinish: ({ usage, stepNumber, finishReason }) => {
+            const inputTokens = usage?.inputTokens ?? 0;
+            const outputTokens = usage?.outputTokens ?? 0;
+
+            if (logger) {
+                logger.info({
+                    event: 'agent.step.finish',
+                    stepNumber,
+                    inputTokens,
+                    outputTokens,
+                    totalTokens: inputTokens + outputTokens,
+                    finishReason,
+                }, `Step ${stepNumber} completed`);
+            }
+        }
     });
     return mainAgent;
 }
@@ -163,9 +187,10 @@ export type PersistentTurnResult = {
 export const runPersistentTurn = async (
     chatId: string,
     userText: string,
+    logger?: Logger,
     opts: { abortSignal?: AbortSignal; onTextDelta?: (text: string) => void } = {}
 ): Promise<PersistentTurnResult> => {
-    const agent = mainAgent();
+    const agent = mainAgent(logger);
     const messages: UIMessage[] = getChatHistory(chatId);
 
     messages.push({
