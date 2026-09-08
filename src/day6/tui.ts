@@ -37,7 +37,7 @@ const runEphemeralTUI = async () => {
     await runAgentTUI({
         title: 'automata',
         agent,
-        tools: 'full',
+        tools: 'auto-collapsed',
         reasoning: 'full',
         responseStatistics: 'outputTokenCount',
         contextSize: 200_000,
