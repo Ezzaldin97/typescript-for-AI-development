@@ -48,6 +48,7 @@
     "@modelcontextprotocol/server-filesystem": "^2026.8.31",
     "@modernized/arxiv-api": "^1.0.1",
     "@tavily/core": "^0.7.9",
+    "@tursodatabase/serverless": "^1.4.0",
     "@types/pino": "^7.0.4",
     "ai": "^7.0.91",
     "ai-sdk-guardrails": "^6.1.1",
