@@ -1,0 +1,95 @@
+import { createInterface } from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+import { generateId } from 'ai';
+import pino, { Logger } from 'pino';
+import fs from 'fs';
+import path from 'path';
+
+import { runPersistentTurn, getChatHistory, getMessageText } from './agent.js';
+
+const logDir = path.join(path.dirname(path.dirname(__dirname)), 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
+// Persistent CLI: history lives in Turso Cloud via memory.ts.
+// runAgentTUI keeps its message list only in memory, so resume requires
+// this loop (load -> turn -> save) instead of runAgentTUI.
+const runPersistentCLI = async (chatId: string) => {
+    const fileTransport = pino.transport({
+        target: 'pino/file',
+        options: {
+            destination: path.join(logDir, `sonar-${chatId}-${Date.now()}.log`),
+            mkdir: true,
+        },
+    });
+    const logger: Logger = pino(
+        {
+            level: process.env.LOG_LEVEL || 'info',
+            formatters: {
+                level: (label) => {
+                    return { level: label };
+                },
+            },
+            timestamp: pino.stdTimeFunctions.isoTime,
+        },
+        fileTransport
+    );
+    const history = await getChatHistory(chatId);
+    console.log(`[persist] chat=${chatId} resumed ${history.length} messages`);
+    for (const m of history.slice(-6)) {
+        const preview = getMessageText(m as any).slice(0, 120);
+        if (preview) console.log(`  [history] ${m.role}: ${preview}`);
+    }
+    console.log("Type '/exit' to quit.\n");
+
+    const rl = createInterface({ input, output });
+    try {
+        while (true) {
+            const prompt = await rl.question('You: ');
+            const text = prompt.trim();
+            if (!text) continue;
+            if (text === '/exit' || text === '/quit') break;
+            try {
+                process.stdout.write('Assistant: ');
+                let lastLen = 0;
+                const { text: finalText } = await runPersistentTurn(chatId, text, logger, {
+                    onTextDelta: (full) => {
+                        // Incremental render: only write the new tail.
+                        if (full.length > lastLen) {
+                            process.stdout.write(full.slice(lastLen));
+                            lastLen = full.length;
+                        }
+                    },
+                });
+                // onTextDelta already streamed the full text; just newline.
+                // If streaming produced nothing visible, print the fallback.
+                if (lastLen === 0 && finalText) process.stdout.write(finalText);
+                process.stdout.write('\n');
+            } catch (error) {
+                console.error('\n[error]', error);
+            }
+        }
+    } finally {
+        rl.close();
+    }
+    console.log(`[persist] saved. Resume with: npx tsx src/day6/tui.ts --persist ${chatId}`);
+};
+
+const main = async () => {
+    const args = process.argv.slice(2);
+    if (args.includes('--persist') || args.includes('--resume')) {
+        const chatId = args.find((a) => !a.startsWith('--')) ?? generateId();
+        await runPersistentCLI(chatId);
+        return;
+    }
+    // Back-compat: bare chatId arg also enters persistent mode.
+    if (args.length === 1 && args[0] && !args[0].startsWith('-')) {
+        await runPersistentCLI(args[0] as string);
+        return;
+    }
+};
+
+main().catch((error) => {
+  console.error('Error:', error);
+});
