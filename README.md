@@ -14,7 +14,7 @@ TypeScript/Node ecosystem as you go.
 | [Day 4](./src/day4/README.md)                                                           | LLM SDKs, Tool Use & Structured Output              | chat.ts (streaming chatbot) and toolLoop.ts (a working, hand-rolled single-tool agent loop).                                      |
 | [Day 5](./src/day5/README.md)                                                           | Building Your First Real Agent                      | agentV1.ts, a working multi-tool agent with conversation memory, using a framework plus at least one MCP-provided tool.           |
 | [Day 6](./src/day6/README.md)                                                           | Multi-Agent Orchestration, Persistence & Guardrails | multiAgent.ts and db.ts, a persisted, guarded, two-agent system with structured logs.                                             |
-| Day 7                                                                                   | Capstone: Build & Ship a Complete Agent App         | A deployed, working agent application with a live URL, a README covering architecture and limitations, and a short written retro. |
+| [Day 7](./sonar/README.md)                                                                                   | Capstone: Build & Ship a Complete Agent App         | A deployed, working agent application with a live URL, a README covering architecture and limitations, and a short written retro. |
 
 ## Prerequisites & Setup
 
